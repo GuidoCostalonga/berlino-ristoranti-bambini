@@ -1,0 +1,429 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8551f">
+<title>I 50 migliori ristoranti per bambini di Berlino</title>
+
+<!-- Leaflet (mappa OpenStreetMap) da CDN: funziona su Android e iPhone con connessione -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root{
+    --bg:#fff7f2; --card:#ffffff; --ink:#2a2320; --muted:#7a6f68;
+    --brand:#e8551f; --brand-2:#f7a531; --line:#f0e2d8; --chip:#fdeee5;
+    --field:#ffffff; --shadow:0 6px 20px rgba(160,90,40,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#1a1512; --card:#241d19; --ink:#f5ece5; --muted:#b3a498;
+           --line:#3a2f28; --chip:#33261f; --field:#2e2620; --shadow:0 6px 20px rgba(0,0,0,.35); }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  header{
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    color:#fff; padding:calc(env(safe-area-inset-top) + 22px) 18px 22px;
+    text-align:center;
+  }
+  header h1{margin:0 0 6px; font-size:1.5rem; line-height:1.25}
+  header p{margin:0; opacity:.95; font-size:.9rem}
+  .wrap{max-width:820px; margin:0 auto; padding:16px 14px 40px}
+
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:12px 14px; box-shadow:var(--shadow); margin:14px 0;
+  }
+  .geobar{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .btn{
+    appearance:none; border:0; cursor:pointer; font-weight:600; font-size:.95rem;
+    background:var(--brand); color:#fff; padding:12px 16px; border-radius:12px;
+    display:inline-flex; align-items:center; gap:8px; min-height:46px;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.secondary{background:var(--chip); color:var(--brand)}
+  #status{font-size:.85rem; color:var(--muted); flex:1; min-width:140px}
+
+  .filters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+  .field{flex:1; min-width:150px; display:flex; flex-direction:column; gap:4px}
+  .field label{font-size:.78rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+  select{
+    appearance:none; width:100%; font-size:1rem; padding:12px 34px 12px 12px; min-height:46px;
+    border:1px solid var(--line); border-radius:12px; background:var(--field); color:var(--ink);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23e8551f' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+  }
+  .count{font-size:.85rem; color:var(--muted); margin:10px 2px 0}
+  .count b{color:var(--brand)}
+
+  #map{height:300px; border-radius:16px; margin:0 0 18px; box-shadow:var(--shadow);
+       border:1px solid var(--line); background:var(--chip)}
+
+  .grid{display:grid; gap:14px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:16px; box-shadow:var(--shadow); position:relative;
+  }
+  .rank{
+    position:absolute; top:-10px; left:14px; background:var(--brand); color:#fff;
+    min-width:30px; height:30px; padding:0 8px; border-radius:15px; display:grid; place-items:center;
+    font-weight:700; font-size:.9rem; box-shadow:var(--shadow);
+  }
+  .card h2{margin:4px 0 2px; font-size:1.15rem; padding-left:30px}
+  .meta{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0}
+  .chip{background:var(--chip); color:var(--brand); font-size:.75rem; font-weight:600;
+        padding:4px 10px; border-radius:999px}
+  .why{margin:8px 0; font-size:.92rem}
+  .addr{font-size:.85rem; color:var(--muted); margin:6px 0 2px}
+  .src{font-size:.75rem; color:var(--muted)}
+  .dist{background:var(--brand); color:#fff}
+  .empty{text-align:center; color:var(--muted); padding:30px 10px}
+  .actions{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap}
+  .actions a{
+    flex:1; text-align:center; text-decoration:none; font-weight:600; font-size:.9rem;
+    padding:11px 10px; border-radius:12px; min-height:44px; display:flex;
+    align-items:center; justify-content:center; gap:6px;
+  }
+  .a-dir{background:var(--brand); color:#fff}
+  .a-map{background:var(--chip); color:var(--brand)}
+  footer{max-width:820px; margin:0 auto; padding:0 14px 40px; color:var(--muted); font-size:.78rem}
+  footer a{color:var(--brand)}
+</style>
+
+<header>
+  <h1>🍽️ 50 ristoranti per bambini a Berlino</h1>
+  <p>I migliori indirizzi family-friendly secondo i principali siti di recensioni</p>
+</header>
+
+<div class="wrap">
+  <div class="panel geobar">
+    <button class="btn" id="locBtn">📍 Trova i più vicini a me</button>
+    <button class="btn secondary" id="resetBtn">↺ Azzera</button>
+    <span id="status">La geolocalizzazione ordina i locali per distanza da te.</span>
+  </div>
+
+  <div class="panel">
+    <div class="filters">
+      <div class="field">
+        <label for="areaSel">Quartiere</label>
+        <select id="areaSel"><option value="all">Tutti i quartieri</option></select>
+      </div>
+      <div class="field">
+        <label for="typeSel">Tipo di locale</label>
+        <select id="typeSel"><option value="all">Tutti i tipi</option></select>
+      </div>
+    </div>
+    <div class="count" id="count"></div>
+  </div>
+
+  <div id="map"></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<footer>
+  <p>Selezione basata su recensioni di TripAdvisor, Top10 Berlin, VisitBerlin, Berlin Food Stories, Well&nbsp;Traveled&nbsp;Kids e guide locali per famiglie. Le coordinate sono indicative: usa il pulsante <em>Indicazioni</em> per la navigazione precisa. Valutazioni, orari e aperture possono cambiare — verifica prima di andare.</p>
+</footer>
+
+<script>
+const RESTAURANTS = [
+  { name:"Prater Garten", area:"Prenzlauer Berg", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Il più antico beer garden di Berlino: enorme spazio sotto i castagni con area giochi, Currywurst e pretzel.",
+    addr:"Kastanienallee 7–9, 10435 Berlin", lat:52.5390, lng:13.4108 },
+  { name:"Charlottchen", area:"Charlottenburg", type:"Teatro & Spettacolo", cuisine:"Tedesca / internazionale", rating:"👍 Top10 Berlin",
+    why:"Ristorante-teatro per bambini con spettacoli dal vivo, sala giochi e menu dedicato (waffle, riso al latte, bratwurst bio).",
+    addr:"Droysenstraße 1, 10629 Berlin", lat:52.5005, lng:13.3070 },
+  { name:"Zollpackhof", area:"Mitte", type:"Biergarten", cuisine:"Bavarese", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Grande sabbiera e area giochi accanto ai tavoli, vista sulla Sprea: i genitori mangiano mentre i bimbi giocano.",
+    addr:"Elisabeth-Abegg-Straße 1, 10557 Berlin", lat:52.5216, lng:13.3665 },
+  { name:"Tiergartenquelle", area:"Moabit", type:"Ristorante", cuisine:"Casalinga tedesca", rating:"⭐ 4,4 · TripAdvisor",
+    why:"Accogliente locale sotto gli archi della ferrovia, porzioni per bambini e atmosfera rilassata vicino al parco.",
+    addr:"Stadtbahnbogen 482, Bachstraße, 10555 Berlin", lat:52.5160, lng:13.3392 },
+  { name:"Tomasa Villa Kreuzberg", area:"Kreuzberg", type:"Brunch & Caffè", cuisine:"Internazionale", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Villa storica con giardino e area giochi: celebre per il brunch della domenica in famiglia.",
+    addr:"Kreuzbergstraße 62, 10965 Berlin", lat:52.4880, lng:13.3805 },
+  { name:"Café Blume", area:"Neukölln", type:"Brunch & Caffè", cuisine:"Caffè / brunch", rating:"👍 Berlin Food Stories",
+    why:"Grande scivolo di legno interno dove i bambini si sfogano, terrazza estiva per gli adulti.",
+    addr:"Nansenstraße 12, 12047 Berlin", lat:52.4905, lng:13.4290 },
+  { name:"Sticks'n'Sushi", area:"Charlottenburg", type:"Ristorante", cuisine:"Giapponese", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Esperienza \"Kids'n'Sushi\": i bambini assemblano e arrotolano il proprio sushi in un bento da portare a casa.",
+    addr:"Kurfürstendamm 195, 10707 Berlin", lat:52.5028, lng:13.3210 },
+  { name:"Ma-Makan", area:"Kreuzberg", type:"Ristorante", cuisine:"Mediorientale", rating:"👍 Well Traveled Kids",
+    why:"Affaccia sulla Lausitzer Platz pedonale con un grande parco giochi: i bimbi giocano in sicurezza davanti al locale.",
+    addr:"Lausitzer Platz 11, 10997 Berlin", lat:52.4995, lng:13.4360 },
+  { name:"Zenner im Treptower Park", area:"Treptow", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Enorme giardino sul fiume accanto a parco giochi e imbarcadero dei battelli: perfetto per una giornata intera.",
+    addr:"Alt-Treptow 14–17, 12435 Berlin", lat:52.4890, lng:13.4640 },
+  { name:"Luise Dahlem", area:"Steglitz-Zehlendorf", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Ampio giardino con area giochi vicino al bosco Grunewald: si può passeggiare prima o dopo pranzo.",
+    addr:"Königin-Luise-Straße 40–42, 14195 Berlin", lat:52.4575, lng:13.2885 },
+  { name:"Domäne Dahlem", area:"Steglitz-Zehlendorf", type:"Fattoria & Natura", cuisine:"Bio / tedesca", rating:"⭐ 4,4 · TripAdvisor",
+    why:"Una vera fattoria biologica in città: galline, pecore e trattori, mercato bio e ristorante con prodotti dell'orto.",
+    addr:"Königin-Luise-Straße 49, 14195 Berlin", lat:52.4560, lng:13.2875 },
+  { name:"Jules Verne", area:"Charlottenburg", type:"Brunch & Caffè", cuisine:"Internazionale", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Atmosfera accogliente, menu per bambini e brunch abbondante nel quartiere vicino al Ku'damm.",
+    addr:"Schlüterstraße 61, 10625 Berlin", lat:52.5065, lng:13.3230 },
+  { name:"Café am Neuen See", area:"Tiergarten", type:"Biergarten", cuisine:"Italiano / biergarten", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Beer garden sul laghetto nel Tiergarten: noleggio barche a remi e grande area giochi, un classico per famiglie.",
+    addr:"Lichtensteinallee 2, 10787 Berlin", lat:52.5106, lng:13.3432 },
+  { name:"Schleusenkrug", area:"Charlottenburg", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Vicino allo Zoo, si guardano le barche passare la chiusa; tavoloni all'aperto e atmosfera rilassata per i bimbi.",
+    addr:"Müller-Breslau-Straße 12, 10623 Berlin", lat:52.5096, lng:13.3318 },
+  { name:"Van Loon", area:"Kreuzberg", type:"Sull'acqua", cuisine:"Pesce / internazionale", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Ristorante su una nave storica ormeggiata sul canale: mangiare a bordo di una barca entusiasma i bambini.",
+    addr:"Carl-Herz-Ufer 5–7, 10961 Berlin", lat:52.4953, lng:13.4030 },
+  { name:"Freischwimmer", area:"Kreuzberg", type:"Sull'acqua", cuisine:"Brunch / internazionale", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Locale sull'acqua su palafitte: brunch weekend rilassato con vista sul canale, molto amato dalle famiglie.",
+    addr:"Vor dem Schlesischen Tor 2a, 10997 Berlin", lat:52.4990, lng:13.4490 },
+  { name:"Nola's am Weinberg", area:"Mitte", type:"Ristorante", cuisine:"Svizzera", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Ai margini del parco Weinberg, con uno dei parchi giochi più grandi del centro proprio accanto alla terrazza.",
+    addr:"Veteranenstraße 9, 10119 Berlin", lat:52.5319, lng:13.4016 },
+  { name:"Brauhaus Südstern", area:"Neukölln", type:"Biergarten", cuisine:"Birreria tedesca", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Accanto al parco Hasenheide con fattoria didattica e area giochi: giardino ideale dopo una passeggiata.",
+    addr:"Hasenheide 69, 10967 Berlin", lat:52.4877, lng:13.4188 },
+  { name:"Loretta am Wannsee", area:"Steglitz-Zehlendorf", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Enorme beer garden vicino al lago Wannsee con giostra e grande parco giochi: gita fuori porta perfetta d'estate.",
+    addr:"Kronprinzessinnenweg 260, 14129 Berlin", lat:52.4318, lng:13.1795 },
+  { name:"Klunkerkranich", area:"Neukölln", type:"Rooftop", cuisine:"Caffè-bar sul tetto", rating:"👍 VisitBerlin",
+    why:"Giardino sul tetto delle Neukölln Arcaden con sabbiera per bambini nel pomeriggio e vista panoramica su Berlino.",
+    addr:"Karl-Marx-Straße 66, 12043 Berlin", lat:52.4789, lng:13.4360 },
+  { name:"Café Anna Blume", area:"Prenzlauer Berg", type:"Brunch & Caffè", cuisine:"Caffè / brunch", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Nel cuore del quartiere più a misura di bambino: brunch abbondante e strada tranquilla con tavoli fuori.",
+    addr:"Kollwitzstraße 83, 10435 Berlin", lat:52.5372, lng:13.4186 },
+  { name:"Standard Serious Pizza", area:"Prenzlauer Berg", type:"Pizzeria", cuisine:"Pizza napoletana", rating:"⭐ 4,5 · TripAdvisor",
+    why:"Pizza napoletana da forno a legna che i bambini adorano; ambiente vivace e informale vicino a Zionskirchplatz.",
+    addr:"Templiner Straße 7, 10119 Berlin", lat:52.5290, lng:13.4145 },
+  { name:"Zwölf Apostel", area:"Mitte", type:"Pizzeria", cuisine:"Pizza italiana", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Pizze enormi servite sotto gli archi scenografici della ferrovia: un colpo d'occhio che diverte i piccoli.",
+    addr:"Georgenstraße 2, 10117 Berlin", lat:52.5195, lng:13.3870 },
+  { name:"Café Botanico", area:"Neukölln", type:"Fattoria & Natura", cuisine:"Italiano / orto", rating:"⭐ 4,4 · TripAdvisor",
+    why:"Ristorante con grande orto in permacultura: i bambini scoprono da dove vengono le verdure che finiscono nel piatto.",
+    addr:"Richardstraße 100, 12043 Berlin", lat:52.4720, lng:13.4470 },
+  { name:"Insel Café (Insel der Jugend)", area:"Treptow", type:"Sull'acqua", cuisine:"Caffè / biergarten", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Su una piccola isola raggiungibile da un ponte, con barche a pedali e prato: piccola avventura tra il verde.",
+    addr:"Alt-Treptow 6, 12435 Berlin", lat:52.4870, lng:13.4670 },
+  { name:"Schoenbrunn im Volkspark", area:"Friedrichshain", type:"Biergarten", cuisine:"Tedesca / biergarten", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Nel Volkspark Friedrichshain accanto al laghetto dei cigni e a grandi parchi giochi: relax nel verde per tutti.",
+    addr:"Am Schwanenteich 22, 10249 Berlin", lat:52.5270, lng:13.4340 },
+  { name:"Golgatha", area:"Kreuzberg", type:"Biergarten", cuisine:"Grill / biergarten", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Beer garden nel Viktoriapark, vicino alla cascata e a un parco giochi: si sale la collina e poi si mangia insieme.",
+    addr:"Dudenstraße 48–64, 10965 Berlin", lat:52.4870, lng:13.3775 },
+  { name:"Engelbecken am Lietzensee", area:"Charlottenburg", type:"Ristorante", cuisine:"Alpina / bavarese", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Cucina alpina davanti al laghetto Lietzensee, con parco e area giochi lungo la riva a due passi.",
+    addr:"Witzlebenstraße 31, 10629 Berlin", lat:52.5075, lng:13.2960 },
+  { name:"Alter Krug Dahlem", area:"Steglitz-Zehlendorf", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Grande giardino con area giochi vicino al Giardino Botanico: comodo per una sosta in famiglia dopo la visita.",
+    addr:"Königin-Luise-Straße 52, 14195 Berlin", lat:52.4560, lng:13.2855 },
+  { name:"Fischerhütte am Schlachtensee", area:"Steglitz-Zehlendorf", type:"Sull'acqua", cuisine:"Tedesca", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Sulle rive del lago Schlachtensee: passeggiata sull'acqua, gelato e giochi, tra i posti preferiti dalle famiglie.",
+    addr:"Fischerhüttenstraße 136, 14163 Berlin", lat:52.4400, lng:13.2085 },
+  { name:"Blockhaus Nikolskoe", area:"Steglitz-Zehlendorf", type:"Biergarten", cuisine:"Tedesca", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Storica casa di tronchi russa sopra la Havel, con terrazza panoramica vicino all'Isola dei Pavoni.",
+    addr:"Nikolskoer Weg 15, 14109 Berlin", lat:52.4225, lng:13.1470 },
+  { name:"Forsthaus Paulsborn", area:"Steglitz-Zehlendorf", type:"Fattoria & Natura", cuisine:"Tedesca", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Antica casa forestale sul lago Grunewaldsee, tra cavalli e cani: si arriva con una passeggiata nel bosco.",
+    addr:"Hüttenweg 90, 14193 Berlin", lat:52.4720, lng:13.2560 },
+  { name:"BRLO Brwhouse", area:"Kreuzberg", type:"Biergarten", cuisine:"Birreria / BBQ", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Beer garden accanto al Park am Gleisdreieck, uno dei parchi con più parchi giochi della città.",
+    addr:"Schöneberger Straße 16, 10963 Berlin", lat:52.4980, lng:13.3740 },
+  { name:"Rübezahl am Müggelsee", area:"Treptow-Köpenick", type:"Biergarten", cuisine:"Tedesca / biergarten", rating:"⭐ 4,0 · TripAdvisor",
+    why:"Grande beer garden con area giochi sulle rive del lago Müggelsee: spiaggia, gelato e natura per una gita lunga.",
+    addr:"Am Großen Müggelsee 1, 12559 Berlin", lat:52.4340, lng:13.6470 },
+  { name:"Augustiner am Gendarmenmarkt", area:"Mitte", type:"Ristorante", cuisine:"Bavarese", rating:"⭐ 4,4 · TripAdvisor",
+    why:"Birreria bavarese centralissima con porzioni abbondanti e menu per bambini: comoda dopo un giro in centro.",
+    addr:"Charlottenstraße 55, 10117 Berlin", lat:52.5135, lng:13.3925 },
+  { name:"Lindenbräu am Potsdamer Platz", area:"Tiergarten", type:"Ristorante", cuisine:"Bavarese", rating:"⭐ 4,1 · TripAdvisor",
+    why:"Grande birreria su più piani al Sony Center: spazio, rumore allegro e piatti semplici graditi ai bambini.",
+    addr:"Bellevuestraße 3–5, 10785 Berlin", lat:52.5095, lng:13.3730 },
+  { name:"Hofbräu Wirtshaus Berlin", area:"Mitte", type:"Ristorante", cuisine:"Bavarese", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Enorme locale in stile bavarese vicino ad Alexanderplatz: tavolate, brezel e menu per bambini.",
+    addr:"Karl-Liebknecht-Straße 30, 10178 Berlin", lat:52.5210, lng:13.4085 },
+  { name:"Transit", area:"Mitte", type:"Ristorante", cuisine:"Thai / asiatica", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Piattini asiatici da condividere, veloci e non piccanti su richiesta: formula pratica con i più piccoli.",
+    addr:"Rosenthaler Straße 68, 10119 Berlin", lat:52.5295, lng:13.4020 },
+  { name:"District Môt", area:"Mitte", type:"Ristorante", cuisine:"Vietnamita", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Scenografia da villaggio vietnamita con sgabellini bassi e lanterne: un'atmosfera che diverte i bambini.",
+    addr:"Rosenthaler Straße 62, 10119 Berlin", lat:52.5285, lng:13.4030 },
+  { name:"The Bird", area:"Prenzlauer Berg", type:"Ristorante", cuisine:"Burger americani", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Hamburger e patatine in stile New York accanto al Mauerpark: informale e amatissimo dalle famiglie.",
+    addr:"Am Falkplatz 5, 10437 Berlin", lat:52.5490, lng:13.4090 },
+  { name:"Frittiersalon", area:"Friedrichshain", type:"Ristorante", cuisine:"Burger / vegetariano", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Burger, patatine e opzioni veggie fatte in casa a due passi da Boxhagener Platz e dal suo parco giochi.",
+    addr:"Boxhagener Straße 104, 10245 Berlin", lat:52.5115, lng:13.4620 },
+  { name:"Hokey Pokey", area:"Prenzlauer Berg", type:"Gelateria & Dolci", cuisine:"Gelato artigianale", rating:"⭐ 4,6 · TripAdvisor",
+    why:"Tra i gelati più premiati di Berlino: gusti creativi e fila (che vale l'attesa) apprezzatissimi dai bambini.",
+    addr:"Stargarder Straße 72–73, 10437 Berlin", lat:52.5470, lng:13.4230 },
+  { name:"Kauf Dich Glücklich", area:"Prenzlauer Berg", type:"Gelateria & Dolci", cuisine:"Waffle & gelato", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Waffle caldi e coppe di gelato in una via pedonale storica: sosta golosa perfetta per una merenda in famiglia.",
+    addr:"Oderberger Straße 44, 10435 Berlin", lat:52.5405, lng:13.4110 },
+  { name:"Fräulein Frost", area:"Neukölln", type:"Gelateria & Dolci", cuisine:"Gelato artigianale", rating:"⭐ 4,5 · TripAdvisor",
+    why:"Gelateria di quartiere con gusti originali vicino al canale: tappa fissa delle famiglie di Neukölln.",
+    addr:"Friedelstraße 39, 12047 Berlin", lat:52.4915, lng:13.4270 },
+  { name:"Jones Ice Cream", area:"Schöneberg", type:"Gelateria & Dolci", cuisine:"Ice cream americano", rating:"⭐ 4,6 · TripAdvisor",
+    why:"Gelato all'americana con cialde fatte in casa nella vivace Goltzstraße: un must per i più golosi.",
+    addr:"Goltzstraße 3, 10781 Berlin", lat:52.4935, lng:13.3520 },
+  { name:"Vanille & Marille", area:"Prenzlauer Berg", type:"Gelateria & Dolci", cuisine:"Gelato artigianale", rating:"⭐ 4,5 · TripAdvisor",
+    why:"Gelato artigianale di ispirazione austriaca con frutta di stagione: cremoso e amato da grandi e piccini.",
+    addr:"Hufelandstraße 37, 10407 Berlin", lat:52.5310, lng:13.4340 },
+  { name:"Café Sowohl als Auch", area:"Prenzlauer Berg", type:"Brunch & Caffè", cuisine:"Pasticceria / brunch", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Storica pasticceria-caffè su Kollwitzplatz con torte, gelato e tavoli all'aperto in una piazza a misura di bimbo.",
+    addr:"Kollwitzstraße 88, 10435 Berlin", lat:52.5360, lng:13.4195 },
+  { name:"Benedict Berlin", area:"Charlottenburg", type:"Brunch & Caffè", cuisine:"Colazione tutto il giorno", rating:"⭐ 4,3 · TripAdvisor",
+    why:"Colazione servita 24 ore su 24: pancake, uova e frutta a ogni ora, ideale con bambini dai ritmi imprevedibili.",
+    addr:"Uhlandstraße 49, 10719 Berlin", lat:52.5000, lng:13.3260 },
+  { name:"Tomasa Winterfeldtplatz", area:"Schöneberg", type:"Brunch & Caffè", cuisine:"Internazionale", rating:"⭐ 4,1 · TripAdvisor",
+    why:"La sede di Schöneberg della celebre catena family: menu bimbi, angolo giochi e brunch sulla piazza del mercato.",
+    addr:"Motzstraße 60, 10777 Berlin", lat:52.4970, lng:13.3480 },
+  { name:"Café Sibylle", area:"Friedrichshain", type:"Brunch & Caffè", cuisine:"Caffè / torte", rating:"⭐ 4,2 · TripAdvisor",
+    why:"Storico caffè sulla monumentale Karl-Marx-Allee, con torte e gelato e ampi marciapiedi per i passeggini.",
+    addr:"Karl-Marx-Allee 72, 10243 Berlin", lat:52.5185, lng:13.4310 },
+];
+
+// --- Riferimenti DOM ---
+const grid = document.getElementById('grid');
+const statusEl = document.getElementById('status');
+const locBtn = document.getElementById('locBtn');
+const resetBtn = document.getElementById('resetBtn');
+const areaSel = document.getElementById('areaSel');
+const typeSel = document.getElementById('typeSel');
+const countEl = document.getElementById('count');
+let userPos = null;
+
+// --- Link mappa universali (Android Google Maps / iPhone Apple o Google Maps / web) ---
+function mapLink(r){ return `https://www.google.com/maps/search/?api=1&query=${r.lat},${r.lng}`; }
+function dirLink(r){
+  const q = encodeURIComponent(r.name + ', ' + r.addr);
+  return `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}&travelmode=transit&q=${q}`;
+}
+function haversine(a,b,c,d){
+  const R=6371, toR=x=>x*Math.PI/180;
+  const dLat=toR(c-a), dLng=toR(d-b);
+  const s=Math.sin(dLat/2)**2 + Math.cos(toR(a))*Math.cos(toR(c))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s));
+}
+function fmtDist(km){ return km<1 ? Math.round(km*1000)+' m' : km.toFixed(1)+' km'; }
+
+// --- Popola i menu a tendina dai dati ---
+function fillSelect(sel, values){
+  values.sort((a,b)=>a.localeCompare(b,'it')).forEach(v=>{
+    const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);
+  });
+}
+fillSelect(areaSel, [...new Set(RESTAURANTS.map(r=>r.area))]);
+fillSelect(typeSel, [...new Set(RESTAURANTS.map(r=>r.type))]);
+
+// --- Mappa Leaflet ---
+let map=null, markerLayer=null, userMarker=null;
+function initMap(){
+  if(typeof L === 'undefined'){
+    const m=document.getElementById('map');
+    m.style.height='auto'; m.style.padding='22px'; m.style.textAlign='center';
+    m.style.display='flex'; m.style.alignItems='center'; m.style.justifyContent='center';
+    m.innerHTML='<div style="color:var(--muted);font-size:.9rem">🗺️ La mappa interattiva si carica aprendo la pagina dal suo indirizzo diretto.<br>Su ogni locale usa <b>🧭 Indicazioni</b> per navigare con Google/Apple Maps.</div>';
+    return;
+  }
+  map = L.map('map',{scrollWheelZoom:false}).setView([52.505,13.39],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
+  applyView();
+}
+function updateMarkers(list){
+  if(!map) return;
+  markerLayer.clearLayers();
+  const pts=[];
+  list.forEach(r=>{
+    L.marker([r.lat,r.lng]).addTo(markerLayer)
+      .bindPopup(`<b>${r.name}</b><br>${r.area} · ${r.type}<br><a href="${dirLink(r)}" target="_blank">Indicazioni ›</a>`);
+    pts.push([r.lat,r.lng]);
+  });
+  if(userPos) pts.push([userPos.lat,userPos.lng]);
+  if(pts.length){ try{ map.fitBounds(pts,{padding:[30,30], maxZoom:14}); }catch(e){} }
+}
+
+// --- Render schede ---
+function render(list){
+  grid.innerHTML='';
+  if(!list.length){
+    grid.innerHTML='<div class="empty">Nessun locale con questi filtri. Prova a cambiare quartiere o tipo.</div>';
+    return;
+  }
+  list.forEach((r,i)=>{
+    const distHtml = (r._dist!=null) ? `<span class="chip dist">📍 ${fmtDist(r._dist)}</span>` : '';
+    const el=document.createElement('article');
+    el.className='card';
+    el.innerHTML=`
+      <div class="rank">${i+1}</div>
+      <h2>${r.name}</h2>
+      <div class="meta">
+        <span class="chip">📍 ${r.area}</span>
+        <span class="chip">🏷️ ${r.type}</span>
+        <span class="chip">🍴 ${r.cuisine}</span>
+        ${distHtml}
+      </div>
+      <div class="why">${r.why}</div>
+      <div class="addr">🏠 ${r.addr}</div>
+      <div class="src">${r.rating}</div>
+      <div class="actions">
+        <a class="a-dir" href="${dirLink(r)}" target="_blank" rel="noopener">🧭 Indicazioni</a>
+        <a class="a-map" href="${mapLink(r)}" target="_blank" rel="noopener">🗺️ Vedi su mappa</a>
+      </div>`;
+    grid.appendChild(el);
+  });
+}
+
+// --- Vista combinata: filtri + eventuale ordinamento per distanza ---
+function applyView(){
+  const a=areaSel.value, t=typeSel.value;
+  let list=RESTAURANTS.filter(r => (a==='all'||r.area===a) && (t==='all'||r.type===t));
+  if(userPos){
+    list=list.map(r=>({...r,_dist:haversine(userPos.lat,userPos.lng,r.lat,r.lng)}))
+             .sort((x,y)=>x._dist-y._dist);
+  }
+  render(list);
+  updateMarkers(list);
+  countEl.innerHTML = `<b>${list.length}</b> local${list.length===1?'e':'i'} su ${RESTAURANTS.length}` +
+    (userPos ? ' · ordinati per distanza' : '');
+}
+
+areaSel.addEventListener('change', applyView);
+typeSel.addEventListener('change', applyView);
+
+// --- Geolocalizzazione ---
+locBtn.addEventListener('click', ()=>{
+  if(!navigator.geolocation){ statusEl.textContent='⚠️ Geolocalizzazione non supportata dal browser.'; return; }
+  statusEl.textContent='📡 Individuazione posizione in corso…';
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      userPos={lat:pos.coords.latitude, lng:pos.coords.longitude};
+      if(map){
+        if(userMarker) userMarker.remove();
+        userMarker=L.marker([userPos.lat,userPos.lng],{
+          icon:L.divIcon({className:'', html:'<div style="background:#1976d2;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 6px rgba(0,0,0,.4)"></div>',iconSize:[18,18]})
+        }).addTo(map).bindPopup('La tua posizione');
+      }
+      applyView();
+      statusEl.textContent='✅ Locali ordinati dal più vicino a te.';
+    },
+    err=>{
+      statusEl.textContent = err.code===1
+        ? '⚠️ Permesso negato. Attiva la posizione per il browser nelle impostazioni.'
+        : '⚠️ Impossibile ottenere la posizione. Riprova.';
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:0}
+  );
+});
+
+// --- Azzera: filtri + ordinamento ---
+resetBtn.addEventListener('click', ()=>{
+  areaSel.value='all'; typeSel.value='all'; userPos=null;
+  if(userMarker){ userMarker.remove(); userMarker=null; }
+  applyView();
+  statusEl.textContent='La geolocalizzazione ordina i locali per distanza da te.';
+});
+
+// --- Avvio ---
+applyView();
+window.addEventListener('load', initMap);
+</script>
